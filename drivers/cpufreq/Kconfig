@@ -355,8 +355,6 @@ config CPU_FREQ_GOV_WALT
 
 	  If in doubt, say N.
 
-
->>>>>>> 47ae825f90585 (BACKPORT: cpufreq_walt from linux 5.10)
 config CPU_INPUT_BOOST
 	bool "CPU Input Boost"
 	help
