@@ -295,8 +295,6 @@ config CPU_FREQ_GOV_BLU_SCHEDUTIL
 
 	  If in doubt, say N.
 
-<<<<<<< HEAD
-=======
 config CPU_FREQ_GOV_GAME
 	bool "'game' cpufreq policy governor"
 	depends on CPU_FREQ && SMP
