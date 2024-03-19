@@ -3,14 +3,14 @@
 # Many parts of this script were taken from @REIGNZ, @idkwhoiam322 and @raphielscape and @pierre. Huge thanks to them.
 
 #proton clang
-if [ -d $pwd../clang-18 ] ; then
+if [ -d $pwd../proton-clang ] ; then
 echo -e "\n lets's go \n"
 else
-echo -e "\n \033[91mpclang-18 dir not found!!!\033[0m \n"
+echo -e "\n \033[91mproton-clang dir not found!!!\033[0m \n"
 sleep 2
-echo -e "\033[93m wait.. cloning clang-18...\033[0m \n"
+echo -e "\033[93m wait.. cloning proton-clang...\033[0m \n"
 sleep 2
-mkdir clang-18 ; cd clang-18 ; wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r510928.tar.gz ; tar -xf * && ls
+git clone https://github.com/kdrag0n/proton-clang.git --depth=1 $pwd../proton-clang
 sleep 1
 echo
 echo -e "\n \033[92mokay cloning done...\033[0m \n"
@@ -24,7 +24,7 @@ SUBARCH="arm64"
 DEFCONFIG=rvtuning_defconfig
 COMPILER=clang
 LINKER=""
-COMPILERDIR="/workspace/beryllium/clang-18"
+COMPILERDIR="/workspace/beryllium/proton-clang"
 
 #clean
 rm -rf out/outputs/*
