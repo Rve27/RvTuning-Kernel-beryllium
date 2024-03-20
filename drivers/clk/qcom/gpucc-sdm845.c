@@ -281,7 +281,7 @@ static const struct freq_tbl  ftbl_gpu_cc_gx_gfx3d_clk_src_sdm845_v2[] = {
 	F(596000000, P_CRC_DIV,  1, 0, 0),
 	F(710000000, P_CRC_DIV,  1, 0, 0),
 	F(800000000, P_CRC_DIV,  1, 0, 0),
-	F(835000000, P_CRC_DIV,  1, 0, 0),
+	F(840000000, P_CRC_DIV,  1, 0, 0),
 	{ }
 };
 
