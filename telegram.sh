@@ -5,14 +5,14 @@
 
 # Ini Pengaturan buat kirim ke supergroup (grup bertopik)
 # Set 1 untuk Ya | 0 untuk Tidak
-TG_SUPER=0
+TG_SUPER=1
 
 # Isi token BOT disini
 TG_TOKEN=6884104326:AAGFvtewNQGplsEqViVyLwYocZg5c898StY
 
 # isi ID channel atau grup
 # Pastikan botnya sudah jadi admin
-CHATID=2017003441
+CHATID=-1002017003441
 # kalo grupnya bertopic isi ini, kalo ngga kosongin aja
 TOPICID=
 
