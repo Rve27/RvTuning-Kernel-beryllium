@@ -21,7 +21,7 @@ fi
 PHONE="beryllium"
 ARCH="arm64"
 SUBARCH="arm64"
-DEFCONFIG=rvtuning_defconfig
+DEFCONFIG=rvtuning-ksu_defconfig
 COMPILER=clang
 LINKER=""
 COMPILERDIR="/workspace/beryllium/proton-clang"
