@@ -1,7 +1,6 @@
 /*
  * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
- * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -364,7 +363,6 @@ struct fastrpc_mmap {
 	int secure;
 	uintptr_t attr;
 	bool is_filemap; /*flag to indicate map used in process init*/
-	unsigned int ctx_refs; /* Indicates reference count for context map */
 };
 
 enum fastrpc_perfkeys {
@@ -716,7 +714,7 @@ static int fastrpc_mmap_remove(struct fastrpc_file *fl, uintptr_t va,
 	hlist_for_each_entry_safe(map, n, &me->maps, hn) {
 		if (map->refs == 1 && map->raddr == va &&
 			map->raddr + map->len == va + len &&
-			/* Remove map if not used in process initialization */
+			/*Remove map if not used in process initialization*/
 			!map->is_filemap) {
 			match = map;
 			hlist_del_init(&map->hn);
@@ -729,10 +727,9 @@ static int fastrpc_mmap_remove(struct fastrpc_file *fl, uintptr_t va,
 		return 0;
 	}
 	hlist_for_each_entry_safe(map, n, &fl->maps, hn) {
-		/* Remove if only one reference map and no context map */
-		if (map->refs == 1 && !map->ctx_refs && map->raddr == va &&
+		if (map->refs == 1 && map->raddr == va &&
 			map->raddr + map->len == va + len &&
-			/* Remove map if not used in process initialization */
+			/*Remove map if not used in process initialization*/
 			!map->is_filemap) {
 			match = map;
 			hlist_del_init(&map->hn);
@@ -777,14 +774,14 @@ static void fastrpc_mmap_free(struct fastrpc_mmap *map, uint32_t flags)
 				map->flags == ADSP_MMAP_REMOTE_HEAP_ADDR) {
 		spin_lock(&me->hlock);
 		map->refs--;
-		if (!map->refs && !map->ctx_refs)
+		if (!map->refs)
 			hlist_del_init(&map->hn);
 		spin_unlock(&me->hlock);
 		if (map->refs > 0)
 			return;
 	} else {
 		map->refs--;
-		if (!map->refs && !map->ctx_refs)
+		if (!map->refs)
 			hlist_del_init(&map->hn);
 		if (map->refs > 0 && !flags)
 			return;
@@ -880,7 +877,6 @@ static int fastrpc_mmap_create(struct fastrpc_file *fl, int fd,
 	map->fd = fd;
 	map->attr = attr;
 	map->is_filemap = false;
-	map->ctx_refs = 0;
 	if (mflags == ADSP_MMAP_HEAP_ADDR ||
 				mflags == ADSP_MMAP_REMOTE_HEAP_ADDR) {
 		unsigned long dma_attrs = DMA_ATTR_SKIP_ZEROING |
@@ -1351,11 +1347,9 @@ static void context_free(struct smq_invoke_ctx *ctx)
 	hlist_del_init(&ctx->hn);
 	spin_unlock(&ctx->fl->hlock);
 	mutex_lock(&ctx->fl->fl_map_mutex);
-	for (i = 0; i < nbufs; ++i) {
-		if (ctx->maps[i] && ctx->maps[i]->ctx_refs)
-			ctx->maps[i]->ctx_refs--;
+	for (i = 0; i < nbufs; ++i)
 		fastrpc_mmap_free(ctx->maps[i], 0);
-	}
+
 	mutex_unlock(&ctx->fl->fl_map_mutex);
 	fastrpc_buf_free(ctx->buf, 1);
 	fastrpc_buf_free(ctx->lbuf, 1);
@@ -1550,8 +1544,6 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 					attrs, buf, len,
 					mflags, &ctx->maps[i]);
 		}
-		if (ctx->maps[i])
-			ctx->maps[i]->ctx_refs++;
 		mutex_unlock(&ctx->fl->fl_map_mutex);
 		ipage += 1;
 	}
@@ -1565,8 +1557,6 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 			dmaflags = FASTRPC_DMAHANDLE_NOMAP;
 		VERIFY(err, !fastrpc_mmap_create(ctx->fl, ctx->fds[i],
 			FASTRPC_ATTR_NOVA, 0, 0, dmaflags, &ctx->maps[i]));
-		if (!err && ctx->maps[i])
-			ctx->maps[i]->ctx_refs++;
 		if (err) {
 			mutex_unlock(&ctx->fl->fl_map_mutex);
 			goto bail;
@@ -1815,8 +1805,6 @@ static int put_args(uint32_t kernel, struct smq_invoke_ctx *ctx,
 				goto bail;
 		} else {
 			mutex_lock(&ctx->fl->fl_map_mutex);
-			if (ctx->maps[i]->ctx_refs)
-				ctx->maps[i]->ctx_refs--;
 			fastrpc_mmap_free(ctx->maps[i], 0);
 			mutex_unlock(&ctx->fl->fl_map_mutex);
 			ctx->maps[i] = NULL;
@@ -1828,11 +1816,8 @@ static int put_args(uint32_t kernel, struct smq_invoke_ctx *ctx,
 			if (!fdlist[i])
 				break;
 			if (!fastrpc_mmap_find(ctx->fl, (int)fdlist[i], 0, 0,
-						0, 0, &mmap)) {
-					if (mmap && mmap->ctx_refs)
-						mmap->ctx_refs--;
-					fastrpc_mmap_free(mmap, 0);
-			}
+						0, 0, &mmap))
+				fastrpc_mmap_free(mmap, 0);
 		}
 	}
 	mutex_unlock(&ctx->fl->fl_map_mutex);
@@ -2252,12 +2237,6 @@ static int fastrpc_init_process(struct fastrpc_file *fl,
 		remote_arg_t ra[1];
 		int tgid = fl->tgid;
 
-		if (fl->dev_minor == MINOR_NUM_DEV) {
-			err = -ECONNREFUSED;
-			pr_err("adsprpc: %s: untrusted apk trying to attach to privileged DSP PD\n",
-				__func__);
-			return err;
-		}
 		ra[0].buf.pv = (void *)&tgid;
 		ra[0].buf.len = sizeof(tgid);
 		ioctl.inv.handle = FASTRPC_STATIC_HANDLE_PROCESS_GROUP;
@@ -2379,13 +2358,6 @@ static int fastrpc_init_process(struct fastrpc_file *fl,
 			unsigned int namelen;
 			unsigned int pageslen;
 		} inbuf;
-
-		if (fl->dev_minor == MINOR_NUM_DEV) {
-			err = -ECONNREFUSED;
-			pr_err("adsprpc: %s: untrusted apk trying to attach to audio PD\n",
-				__func__);
-			return err;
-		}
 
 		if (!init->filelen)
 			goto bail;
@@ -3957,27 +3929,6 @@ bail:
 	return err;
 }
 
-static int fastrpc_update_cdsp_support(struct fastrpc_file *fl)
-{
-	struct fastrpc_ioctl_dsp_capabilities *dsp_query;
-	struct fastrpc_apps *me = &gfa;
-	int err = 0;
-
-	VERIFY(err, NULL != (dsp_query = kzalloc(sizeof(*dsp_query),
-				GFP_KERNEL)));
-	if (err)
-		goto bail;
-	dsp_query->domain = CDSP_DOMAIN_ID;
-	err = fastrpc_get_info_from_kernel(dsp_query, fl);
-	if (err)
-		goto bail;
-	if (!(dsp_query->dsp_attributes[1]))
-		me->channel[CDSP_DOMAIN_ID].unsigned_support = false;
-bail:
-	kfree(dsp_query);
-	return err;
-}
-
 static long fastrpc_device_ioctl(struct file *file, unsigned int ioctl_num,
 				 unsigned long ioctl_param)
 {
@@ -3999,9 +3950,8 @@ static long fastrpc_device_ioctl(struct file *file, unsigned int ioctl_num,
 	} i;
 	void *param = (char *)ioctl_param;
 	struct fastrpc_file *fl = (struct fastrpc_file *)file->private_data;
-	int size = 0, err = 0, req_complete = 0;
+	int size = 0, err = 0;
 	uint32_t info;
-	static bool isQueryDone;
 
 	VERIFY(err, fl != NULL);
 	if (err) {
@@ -4202,11 +4152,6 @@ static long fastrpc_device_ioctl(struct file *file, unsigned int ioctl_num,
 		VERIFY(err, 0 == (err = fastrpc_init_process(fl, &p.init)));
 		if (err)
 			goto bail;
-		if ((fl->cid == CDSP_DOMAIN_ID) && !isQueryDone) {
-			req_complete = fastrpc_update_cdsp_support(fl);
-			if (!req_complete)
-				isQueryDone = true;
-		}
 		break;
 	case FASTRPC_IOCTL_GET_DSP_INFO:
 		err = fastrpc_get_dsp_info(&p.dsp_cap, param, fl);
