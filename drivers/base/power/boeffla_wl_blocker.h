@@ -20,5 +20,4 @@
 
 #define LENGTH_LIST_WL				255
 #define LENGTH_LIST_WL_DEFAULT		100
->>>>>>> 83211a287d60 (boeffla_wl_blocker: update to wakelock blocker driver v1.1.0)
 #define LENGTH_LIST_WL_SEARCH		LENGTH_LIST_WL + LENGTH_LIST_WL_DEFAULT + 5
