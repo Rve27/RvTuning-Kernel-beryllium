@@ -5136,7 +5136,7 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	 */
 	schedtune_enqueue_task(p, cpu_of(rq));
 #endif
-	bool schedtune_prefer_idle(p) > 0;
+	bool prefer_idle = schedtune_prefer_idle(p) > 0;
 
 #ifdef CONFIG_SCHED_WALT
 	p->misfit = !task_fits_max(p, rq->cpu);
