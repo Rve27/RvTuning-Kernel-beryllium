@@ -180,11 +180,6 @@ static unsigned int get_next_freq(struct sugov_policy *sg_policy,
 	unsigned int freq = arch_scale_freq_invariant() ?
 				policy->cpuinfo.max_freq : policy->cur;
 
-	if (sg_policy->tunables->exp_util)
-		freq = (freq + (freq >> 2)) * int_sqrt(util * 100 / max) / 10;
-	else
-		freq = (freq + (freq >> 2)) * util / max;
-
 	trace_sugov_next_freq(policy->cpu, util, max, freq);
 
 	if (freq == sg_policy->cached_raw_freq && sg_policy->next_freq != UINT_MAX)
@@ -533,7 +528,6 @@ static ssize_t exp_util_show(struct gov_attr_set *attr_set, char *buf)
 {
 	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
 
-	return scnprintf(buf, PAGE_SIZE, "%u\n", tunables->exp_util);
 }
 
 static ssize_t exp_util_store(struct gov_attr_set *attr_set, const char *buf,
@@ -541,7 +535,6 @@ static ssize_t exp_util_store(struct gov_attr_set *attr_set, const char *buf,
 {
 	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
 
-	if (kstrtobool(buf, &tunables->exp_util))
 		return -EINVAL;
 
 	return count;
