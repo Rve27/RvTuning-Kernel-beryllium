@@ -526,14 +526,14 @@ static ssize_t iowait_boost_enable_store(struct gov_attr_set *attr_set,
 
 static ssize_t exp_util_show(struct gov_attr_set *attr_set, char *buf)
 {
-	struct sugov_tunables = to_sugov_tunables(attr_set);
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
 
 }
 
 static ssize_t exp_util_store(struct gov_attr_set *attr_set, const char *buf,
 				   size_t count)
 {
-	struct sugov_tunables = to_sugov_tunables(attr_set);
+	struct sugov_tunables *tunables = to_sugov_tunables(attr_set);
 
 		return -EINVAL;
 
