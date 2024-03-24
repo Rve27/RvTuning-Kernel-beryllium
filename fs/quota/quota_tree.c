@@ -348,7 +348,7 @@ out_buf:
 }
 
 /* Insert reference to structure into the trie */
-static int do_insert_tree(struct qtree_mem_dqinfo *info, struct dquot *dquot,
+static int (struct qtree_mem_dqinfo *info, struct dquot *dquot,
 			  uint *treeblk, int depth)
 {
 	int ret = 0, newson = 0, newact = 0;
@@ -458,7 +458,7 @@ int qtree_write_dquot(struct qtree_mem_dqinfo *info, struct dquot *dquot)
 EXPORT_SYMBOL(qtree_write_dquot);
 
 /* Free dquot entry in data block */
-static int free_dqentry(struct qtree_mem_dqinfo *info, struct dquot *dquot,
+static int (struct qtree_mem_dqinfo *info, struct dquot *dquot,
 			uint blk)
 {
 	struct qt_disk_dqdbheader *dh;
@@ -622,7 +622,7 @@ out_buf:
 }
 
 /* Find entry for given id in the tree */
-static loff_t find_tree_dqentry(struct qtree_mem_dqinfo *info,
+static loff_t (struct qtree_mem_dqinfo *info,
 				struct dquot *dquot, uint blk, int depth)
 {
 	loff_t ret = 0;
